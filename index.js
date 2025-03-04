@@ -52,11 +52,14 @@ const playlists = [
 let nextSongId = 9;
 let nextPlaylistId = 4;
 
-/* --------------------------
+const apiRouter = express.Router();
+app.use(apiPath + version, apiRouter);
 
-        SONGS ENDPOINTS     
-
--------------------------- */
+// SONGS ENDPOINTS
+apiRouter.get("/songs", (req, res) => {
+  console.log(req);
+  res.status(200).json(songs);
+});
 
 /* --------------------------
 
