@@ -57,15 +57,13 @@ app.use(apiPath + version, apiRouter);
 
 // SONGS ENDPOINTS
 apiRouter.get("/songs", (req, res) => {
-  console.log(req);
   res.status(200).json(songs);
 });
 
-/* --------------------------
-
-      PLAYLISTS ENDPOINTS    
-
--------------------------- */
+// PLAYLISTS ENDPOINTS
+apiRouter.get("/playlists", (req, res) => {
+  res.status(200).json(playlists);
+});
 
 /* --------------------------
 
