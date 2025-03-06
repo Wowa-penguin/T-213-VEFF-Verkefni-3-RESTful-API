@@ -26,7 +26,7 @@ app.use((req, res, next) => {
 });
 
 /* Initial Data */
-const songs = [
+let songs = [
   { id: 1, title: "Cry For Me", artist: "The Weeknd" },
   { id: 2, title: "Busy Woman", artist: "Sabrina Carpenter" },
   {
@@ -41,7 +41,7 @@ const songs = [
   { id: 8, title: "Eclipse", artist: "parrow" },
 ];
 
-const playlists = [
+let playlists = [
   { id: 1, name: "Hot Hits Iceland", songIds: [1, 2, 3, 4] },
   { id: 2, name: "Workout Playlist", songIds: [2, 5, 6] },
   { id: 3, name: "Lo-Fi Study", songIds: [] },
@@ -60,9 +60,63 @@ apiRouter.get("/songs", (req, res) => {
   res.status(200).json(songs);
 });
 
+apiRouter.post("/songs", (req, res) => {
+  // todo: Error handel the req
+
+  const song = req.body;
+  songs.push({ id: nextSongId, ...song });
+
+  // todo: búa til id funcsion sem passar upp á id sé rétt
+  nextSongId++;
+
+  res.send("good to go");
+});
+
+apiRouter.get("/songs/:id", (req, res) => {
+  const { id } = req.params;
+  const foundSong = songs.find((song) => song.id === Number(id));
+  if (foundSong) {
+    res.status(200).json(foundSong);
+  } else {
+    res.status(400).send(`No song has the id of ${id}`);
+  }
+});
+
+apiRouter.patch("/songs/:id", (req, res) => {
+  const { id } = req.params;
+  const { title, artist } = req.body;
+
+  const foundSong = songs.find((song) => song.id === Number(id));
+
+  if (title) foundSong.title = title;
+  if (artist) foundSong.artist = artist;
+
+  res.status(200).send(`Song whit the id of ${id} has been updated`);
+});
+
+apiRouter.delete("/songs/:id", (req, res) => {
+  const { id } = req.params;
+
+  songs = songs.filter((song) => song.id !== Number(id));
+
+  res.status(200).send(`Song whit the id of ${id} has been deletet`);
+});
+
 // PLAYLISTS ENDPOINTS
 apiRouter.get("/playlists", (req, res) => {
   res.status(200).json(playlists);
+});
+
+apiRouter.get("/playlists/:id", (req, res) => {
+  const { id } = req.params;
+  const foundPlayList = playlists.find(
+    (playlist) => playlist.id === Number(id)
+  );
+  if (foundPlayList) {
+    res.status(200).json(foundPlayList);
+  } else {
+    res.status(400).send(`No playlist has the id of ${id}`);
+  }
 });
 
 /* --------------------------
