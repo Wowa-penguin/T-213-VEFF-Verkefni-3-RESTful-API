@@ -96,10 +96,28 @@ app.use(apiPath + version, apiRouter);
 
 // SONGS ENDPOINTS
 apiRouter.get("/songs", (req, res) => {
-  // nextSongIDHeler();
-  console.log(req.query.filters.songs);
-  console.log(req.query.fields);
-  res.status(200).json(songs);
+  const filters = req.query;
+  let resArray = [];
+  if (filters.title) {
+    filters.title.forEach((value) => {
+      songs.forEach((song) => {
+        if (song.title == value) resArray.push(song);
+      });
+    });
+  }
+  if (filters.artist) {
+    filters.artist.forEach((value) => {
+      songs.forEach((song) => {
+        if (song.artist == value) resArray.push(song);
+      });
+    });
+  }
+  resArray.length;
+  if (resArray.length != 0)
+    res
+      .status(200)
+      .json({ message: "Songs are filtered", data: { filters: resArray } });
+  else res.status(200).json({ message: "All songs returned", data: { songs } });
 });
 
 apiRouter.post("/songs", (req, res) => {
@@ -123,8 +141,6 @@ apiRouter.post("/songs", (req, res) => {
       data: { newSong },
     });
   }
-
-  // todo: búa til id funcsion sem passar upp á id sé rétt
 });
 
 apiRouter.get("/songs/:id", (req, res) => {
