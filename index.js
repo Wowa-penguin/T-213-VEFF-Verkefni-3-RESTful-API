@@ -63,7 +63,7 @@ const nextSongIDHeler = () => {
 
 const fixSongIdInPlaylists = (songId) => {
   playlists.forEach((playlist) => {
-    playlist.songIds = playlist.songIds.filter((id) => id !== songId);
+    playlist.songIds = playlist.songIds.filter((id) => id != songId);
   });
 };
 
@@ -91,7 +91,7 @@ apiRouter.post("/songs", (req, res) => {
 apiRouter.get("/songs/:id", (req, res) => {
   const { id } = req.params;
 
-  const foundSong = songs.find((song) => song.id === Number(id));
+  const foundSong = songs.find((song) => song.id == id);
 
   if (foundSong) res.status(200).json(foundSong);
   else res.status(400).send(`No song has the id of ${id}`);
@@ -101,7 +101,7 @@ apiRouter.patch("/songs/:id", (req, res) => {
   const { id } = req.params;
   const { title, artist } = req.body;
 
-  const foundSong = songs.find((song) => song.id === Number(id));
+  const foundSong = songs.find((song) => song.id == id);
 
   if (title) foundSong.title = title;
   if (artist) foundSong.artist = artist;
@@ -113,7 +113,7 @@ apiRouter.delete("/songs/:id", (req, res) => {
   // todo: Það þarf að passa upp á error handal
   const { id } = req.params;
 
-  songs = songs.filter((song) => song.id !== Number(id));
+  songs = songs.filter((song) => song.id != id);
   fixSongIdInPlaylists(Number(id));
 
   res.status(200).send(`Song whit the id of ${id} has been deletet`);
@@ -127,9 +127,7 @@ apiRouter.get("/playlists", (req, res) => {
 apiRouter.get("/playlists/:id", (req, res) => {
   const { id } = req.params;
 
-  const foundPlayList = playlists.find(
-    (playlist) => playlist.id === Number(id)
-  );
+  const foundPlayList = playlists.find((playlist) => playlist.id == id);
 
   if (foundPlayList) res.status(200).json(foundPlayList);
   else res.status(400).send(`No playlist has the id of ${id}`);
