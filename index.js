@@ -67,6 +67,19 @@ const fixSongIdInPlaylists = (songId) => {
   });
 };
 
+const checkIfExists = (newSong) => {
+  let valid = false;
+  songs.forEach((song) => {
+    if (
+      song.artist.toLowerCase() === newSong.artist.toLowerCase() &&
+      song.title.toLowerCase() === newSong.title.toLowerCase()
+    ) {
+      valid = true;
+    }
+  });
+  return valid;
+};
+
 /*
 const validKeys = (newSong) => {
   const validSongKeys = ["title", "artist"];
@@ -84,22 +97,34 @@ app.use(apiPath + version, apiRouter);
 // SONGS ENDPOINTS
 apiRouter.get("/songs", (req, res) => {
   // nextSongIDHeler();
+  console.log(req.query.filters.songs);
+  console.log(req.query.fields);
   res.status(200).json(songs);
 });
 
 apiRouter.post("/songs", (req, res) => {
-  // todo: Error handel the req
   const newSong = {
     id: nextSongId,
     title: req.body.title,
     artist: req.body.artist,
   };
-  songs.push(newSong);
+
+  const exists = checkIfExists(newSong);
+  if (exists === true) {
+    res.status(403).json({ message: "The song exists" });
+  }
+
+  if (res.statusCode !== 403) {
+    songs.push(newSong);
+    nextSongId++;
+
+    res.status(200).json({
+      message: `A song was created with the id og ${nextSongId - 1}`,
+      data: { newSong },
+    });
+  }
 
   // todo: búa til id funcsion sem passar upp á id sé rétt
-  nextSongId++;
-
-  res.status(200).send(`A song was created with the id og ${nextSongId - 1}`);
 });
 
 apiRouter.get("/songs/:id", (req, res) => {
@@ -108,7 +133,7 @@ apiRouter.get("/songs/:id", (req, res) => {
   const foundSong = songs.find((song) => song.id == id);
 
   if (foundSong) res.status(200).json(foundSong);
-  else res.status(400).send(`No song has the id of ${id}`);
+  else res.status(400).json({ message: `No song has the id of ${id}` });
 });
 
 apiRouter.patch("/songs/:id", (req, res) => {
@@ -117,20 +142,33 @@ apiRouter.patch("/songs/:id", (req, res) => {
 
   const foundSong = songs.find((song) => song.id == id);
 
+  if (!foundSong) res.status(403).json({ message: "The song was not found" });
   if (title) foundSong.title = title;
   if (artist) foundSong.artist = artist;
 
-  res.status(200).send(`Song whit the id of ${id} has been updated`);
+  if (res.statusCode !== 403)
+    res.status(200).json({
+      message: `Song with the id of ${id} has been updated`,
+      data: { foundSong },
+    });
 });
 
 apiRouter.delete("/songs/:id", (req, res) => {
   // todo: Það þarf að passa upp á error handal
   const { id } = req.params;
 
-  songs = songs.filter((song) => song.id != id);
-  fixSongIdInPlaylists(Number(id));
+  const foundSong = songs.find((song) => song.id == id);
+  if (!foundSong)
+    res.status(403).json({ message: `Song with id of ${id} was not found` });
 
-  res.status(200).send(`Song whit the id of ${id} has been deletet`);
+  if (res.statusCode !== 403) {
+    songs = songs.filter((song) => song.id != id);
+    fixSongIdInPlaylists(id);
+    res.status(200).json({
+      message: `Song with the id of ${id} has been deleted`,
+      data: { deletedSong: foundSong },
+    });
+  }
 });
 
 // PLAYLISTS ENDPOINTS
