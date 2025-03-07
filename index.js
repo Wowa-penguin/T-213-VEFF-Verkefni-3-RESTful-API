@@ -52,11 +52,27 @@ let playlists = [
 let nextSongId = 9;
 let nextPlaylistId = 4;
 
+const nextSongIDHeler = () => {
+  //* Veit ekki ef þessi þarf að vera upp á að ids fyrir songs fara frá 1 ... n
+  let fixID = 1;
+  songs.forEach((song) => {
+    song.id = fixID;
+    fixID++;
+  });
+};
+
+const fixSongIdInPlaylists = (songId) => {
+  playlists.forEach((playlist) => {
+    playlist.songIds = playlist.songIds.filter((id) => id !== songId);
+  });
+};
+
 const apiRouter = express.Router();
 app.use(apiPath + version, apiRouter);
 
 // SONGS ENDPOINTS
 apiRouter.get("/songs", (req, res) => {
+  // nextSongIDHeler();
   res.status(200).json(songs);
 });
 
@@ -74,12 +90,11 @@ apiRouter.post("/songs", (req, res) => {
 
 apiRouter.get("/songs/:id", (req, res) => {
   const { id } = req.params;
+
   const foundSong = songs.find((song) => song.id === Number(id));
-  if (foundSong) {
-    res.status(200).json(foundSong);
-  } else {
-    res.status(400).send(`No song has the id of ${id}`);
-  }
+
+  if (foundSong) res.status(200).json(foundSong);
+  else res.status(400).send(`No song has the id of ${id}`);
 });
 
 apiRouter.patch("/songs/:id", (req, res) => {
@@ -95,9 +110,11 @@ apiRouter.patch("/songs/:id", (req, res) => {
 });
 
 apiRouter.delete("/songs/:id", (req, res) => {
+  // todo: Það þarf að passa upp á error handal
   const { id } = req.params;
 
   songs = songs.filter((song) => song.id !== Number(id));
+  fixSongIdInPlaylists(Number(id));
 
   res.status(200).send(`Song whit the id of ${id} has been deletet`);
 });
@@ -109,14 +126,13 @@ apiRouter.get("/playlists", (req, res) => {
 
 apiRouter.get("/playlists/:id", (req, res) => {
   const { id } = req.params;
+
   const foundPlayList = playlists.find(
     (playlist) => playlist.id === Number(id)
   );
-  if (foundPlayList) {
-    res.status(200).json(foundPlayList);
-  } else {
-    res.status(400).send(`No playlist has the id of ${id}`);
-  }
+
+  if (foundPlayList) res.status(200).json(foundPlayList);
+  else res.status(400).send(`No playlist has the id of ${id}`);
 });
 
 /* --------------------------
