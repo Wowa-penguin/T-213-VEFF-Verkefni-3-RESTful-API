@@ -67,8 +67,19 @@ const fixSongIdInPlaylists = (songId) => {
   });
 };
 
+/*
+const validKeys = (newSong) => {
+  const validSongKeys = ["title", "artist"];
+  const songKeys = Object.keys(newSong);
+  if (JSON.stringify(songKeys) === JSON.stringify(validSongKeys)) return true;
+  else false;
+};
+*/
+
 const apiRouter = express.Router();
 app.use(apiPath + version, apiRouter);
+
+// todo: Skoða ef error mes á að vera sent með json í stað fyrir .send
 
 // SONGS ENDPOINTS
 apiRouter.get("/songs", (req, res) => {
@@ -78,9 +89,12 @@ apiRouter.get("/songs", (req, res) => {
 
 apiRouter.post("/songs", (req, res) => {
   // todo: Error handel the req
-
-  const song = req.body;
-  songs.push({ id: nextSongId, ...song });
+  const newSong = {
+    id: nextSongId,
+    title: req.body.title,
+    artist: req.body.artist,
+  };
+  songs.push(newSong);
 
   // todo: búa til id funcsion sem passar upp á id sé rétt
   nextSongId++;
