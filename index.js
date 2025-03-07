@@ -69,7 +69,7 @@ apiRouter.post("/songs", (req, res) => {
   // todo: búa til id funcsion sem passar upp á id sé rétt
   nextSongId++;
 
-  res.send("good to go");
+  res.status(200).send(`A song was created with the id og ${nextSongId - 1}`);
 });
 
 apiRouter.get("/songs/:id", (req, res) => {
