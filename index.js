@@ -80,44 +80,33 @@ const checkIfExists = (newSong) => {
   return valid;
 };
 
-/*
-const validKeys = (newSong) => {
-  const validSongKeys = ["title", "artist"];
-  const songKeys = Object.keys(newSong);
-  if (JSON.stringify(songKeys) === JSON.stringify(validSongKeys)) return true;
-  else false;
-};
-*/
-
 const apiRouter = express.Router();
 app.use(apiPath + version, apiRouter);
 
-// todo: Skoða ef error mes á að vera sent með json í stað fyrir .send
-
 // SONGS ENDPOINTS
 apiRouter.get("/songs", (req, res) => {
-  const filters = req.query;
-  let resArray = [];
-  if (filters.title) {
-    filters.title.forEach((value) => {
-      songs.forEach((song) => {
-        if (song.title == value) resArray.push(song);
-      });
-    });
+  // http://localhost:3000/api/v1/songs?filter=Abracadabra,Róa
+  let { filter } = req.query;
+
+  // Return all songs if no filter is provided
+  if (!filter) {
+    return res.json(songs);
   }
-  if (filters.artist) {
-    filters.artist.forEach((value) => {
-      songs.forEach((song) => {
-        if (song.artist == value) resArray.push(song);
-      });
-    });
-  }
-  resArray.length;
-  if (resArray.length != 0)
-    res
-      .status(200)
-      .json({ message: "Songs are filtered", data: { filters: resArray } });
-  else res.status(200).json({ message: "All songs returned", data: { songs } });
+
+  // Convert filter to an array to handle multiple filters if so
+  let arrayfilters = Array.isArray(filter) ? filter : filter.split(","); // if filter is a string then split it to make it array
+  arrayfilters = arrayfilters.map((f) => f.toLowerCase().trim()); //  Convert strings in arrayfilters array to lower case
+
+  // Filter songs based on arrayfilters array
+  let filteredSongs = songs.filter((song) =>
+    arrayfilters.some(
+      (filterValue) =>
+        song.title.toLowerCase().includes(filterValue) ||
+        song.artist.toLowerCase().includes(filterValue)
+    )
+  );
+
+  return res.json(filteredSongs);
 });
 
 apiRouter.post("/songs", (req, res) => {
@@ -126,21 +115,19 @@ apiRouter.post("/songs", (req, res) => {
     title: req.body.title,
     artist: req.body.artist,
   };
-
+  // Error if no title or aetist in req.body
+  if (!newSong.title || !newSong.artist)
+    return res.status(400).send(`Missing title or artist`);
+  // Error if the song exists in the db
   const exists = checkIfExists(newSong);
   if (exists === true) {
-    res.status(403).json({ message: "The song exists" });
+    return res.status(403).send("The song exists");
   }
 
-  if (res.statusCode !== 403) {
-    songs.push(newSong);
-    nextSongId++;
+  songs.push(newSong);
+  nextSongId++;
 
-    res.status(200).json({
-      message: `A song was created with the id og ${nextSongId - 1}`,
-      data: { newSong },
-    });
-  }
+  return res.status(200).json(newSong);
 });
 
 apiRouter.get("/songs/:id", (req, res) => {
@@ -148,8 +135,8 @@ apiRouter.get("/songs/:id", (req, res) => {
 
   const foundSong = songs.find((song) => song.id == id);
 
-  if (foundSong) res.status(200).json(foundSong);
-  else res.status(400).json({ message: `No song has the id of ${id}` });
+  if (foundSong) return res.status(200).json(foundSong);
+  else return res.status(400).send(`No song has the id of ${id}`);
 });
 
 apiRouter.patch("/songs/:id", (req, res) => {
@@ -158,33 +145,22 @@ apiRouter.patch("/songs/:id", (req, res) => {
 
   const foundSong = songs.find((song) => song.id == id);
 
-  if (!foundSong) res.status(403).json({ message: "The song was not found" });
+  if (!foundSong) return res.status(403).send("The song was not found");
   if (title) foundSong.title = title;
   if (artist) foundSong.artist = artist;
 
-  if (res.statusCode !== 403)
-    res.status(200).json({
-      message: `Song with the id of ${id} has been updated`,
-      data: { foundSong },
-    });
+  res.status(200).json(foundSong);
 });
 
 apiRouter.delete("/songs/:id", (req, res) => {
-  // todo: Það þarf að passa upp á error handal
   const { id } = req.params;
-
   const foundSong = songs.find((song) => song.id == id);
   if (!foundSong)
-    res.status(403).json({ message: `Song with id of ${id} was not found` });
+    return res.status(403).send(`Song with id of ${id} was not found`);
 
-  if (res.statusCode !== 403) {
-    songs = songs.filter((song) => song.id != id);
-    fixSongIdInPlaylists(id);
-    res.status(200).json({
-      message: `Song with the id of ${id} has been deleted`,
-      data: { deletedSong: foundSong },
-    });
-  }
+  songs = songs.filter((song) => song.id != id);
+  fixSongIdInPlaylists(id);
+  return res.status(200).json(foundSong);
 });
 
 // PLAYLISTS ENDPOINTS
@@ -194,11 +170,63 @@ apiRouter.get("/playlists", (req, res) => {
 
 apiRouter.get("/playlists/:id", (req, res) => {
   const { id } = req.params;
+  let arraySongObj = [];
 
   const foundPlayList = playlists.find((playlist) => playlist.id == id);
 
-  if (foundPlayList) res.status(200).json(foundPlayList);
-  else res.status(400).send(`No playlist has the id of ${id}`);
+  foundPlayList.songIds.forEach((id) => {
+    foundSong = songs.find((song) => song.id == id);
+    arraySongObj.push(foundSong);
+  });
+
+  foundPlayList.songIds = arraySongObj;
+
+  if (foundPlayList) return res.status(200).json(foundPlayList);
+  else return res.status(400).send(`No playlist has the id of ${id}`);
+});
+
+apiRouter.post("/playlists", (req, res) => {
+  const { name } = req.body;
+  // Error if there is no name
+  if (!name) return res.status(400).send(`Requested has no name`);
+
+  const newPlaylists = { id: nextPlaylistId, name: name, songIds: [] };
+  playlists.push(newPlaylists);
+
+  res.status(200).json(newPlaylists);
+});
+
+apiRouter.patch("/playlists/:playlistId/:songId", (req, res) => {
+  const { playlistId, songId } = req.params;
+  const { songIds } = req.body;
+  // Error if req.body is a bad request
+  if (
+    !req.body ||
+    !Array.isArray(req.body.songIds) ||
+    req.body.songIds.length <= 0
+  ) {
+    return res.status(400).json({
+      error: `Song ids has to be an array form and not of length 0`,
+      data: req.body,
+    });
+  }
+
+  const foundPlayList = playlists.find((playlist) => playlist.id == playlistId);
+  const foundSong = songs.find((song) => song.id == songId);
+
+  // Erorr 400
+  if (!foundPlayList || !foundSong)
+    return res
+      .status(400)
+      .send(`No playlist has the id of ${playlistId} or song ${songId}`);
+  // add the song ids to the found playlist
+  if (songId) {
+    songIds.forEach((id) => {
+      foundPlayList.songIds.push(id);
+    });
+  }
+
+  return res.status(200).json(foundPlayList);
 });
 
 /* --------------------------
