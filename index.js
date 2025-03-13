@@ -86,38 +86,46 @@ app.use(apiPath + version, apiRouter);
 // SONGS ENDPOINTS
 apiRouter.get("/songs", (req, res) => {
   // http://localhost:3000/api/v1/songs?filter=Abracadabra,Róa
-  let { filter } = req.query;
+  // Error if incorrect filter parameter (/songs/) t.d
+  const requestedUrl = req.url;
+  if (requestedUrl === "/songs/") return res.status(400).send("Bad Request");
 
-  // Return all songs if no filter is provided
+  const { filter } = req.query;
+  // Return all songs if no filter is provided and no filter error
   if (!filter) {
     return res.json(songs);
   }
 
   // Convert filter to an array to handle multiple filters if so
-  let arrayfilters = Array.isArray(filter) ? filter : filter.split(","); // if filter is a string then split it to make it array
+  const arrayfilters = Array.isArray(filter) ? filter : filter.split(","); // if filter is a string then split it to make it array
   arrayfilters = arrayfilters.map((f) => f.toLowerCase().trim()); //  Convert strings in arrayfilters array to lower case
 
   // Filter songs based on arrayfilters array
-  let filteredSongs = songs.filter((song) =>
+  const filteredSongs = songs.filter((song) =>
     arrayfilters.some(
       (filterValue) =>
         song.title.toLowerCase().includes(filterValue) ||
         song.artist.toLowerCase().includes(filterValue)
     )
   );
-
+  // filteredSongs.length;
+  // if (filteredSongs.length == 0) return res.status(400).send("Bad Request");
   return res.json(filteredSongs);
 });
 
 apiRouter.post("/songs", (req, res) => {
+  if (typeof req.body.title !== "string" || typeof req.body.artist !== "string")
+    return res.status(400).send("Title or aetist is not a string");
+
   const newSong = {
     id: nextSongId,
     title: req.body.title,
     artist: req.body.artist,
   };
-  // Error if no title or aetist in req.body
+
   if (!newSong.title || !newSong.artist)
-    return res.status(400).send(`Missing title or artist`);
+    // Error if no title or aetist in req.body
+    return res.status(400).send("Missing title or artist");
   // Error if the song exists in the db
   const exists = checkIfExists(newSong);
   if (exists === true) {
@@ -127,7 +135,7 @@ apiRouter.post("/songs", (req, res) => {
   songs.push(newSong);
   nextSongId++;
 
-  return res.status(200).json(newSong);
+  return res.status(201).json(newSong);
 });
 
 apiRouter.get("/songs/:id", (req, res) => {
@@ -139,13 +147,15 @@ apiRouter.get("/songs/:id", (req, res) => {
   else return res.status(400).send(`No song has the id of ${id}`);
 });
 
-apiRouter.patch("/songs/:id", (req, res) => {
-  const { id } = req.params;
+apiRouter.patch("/songs/:songId", (req, res) => {
+  const { songId } = req.params;
   const { title, artist } = req.body;
 
-  const foundSong = songs.find((song) => song.id == id);
+  if (isNaN(songId)) return res.status(400).send("SongId is not a number");
 
-  if (!foundSong) return res.status(403).send("The song was not found");
+  const foundSong = songs.find((song) => song.id == songId);
+
+  if (!foundSong) return res.status(404).send("Not Found");
   if (title) foundSong.title = title;
   if (artist) foundSong.artist = artist;
 
@@ -154,9 +164,11 @@ apiRouter.patch("/songs/:id", (req, res) => {
 
 apiRouter.delete("/songs/:id", (req, res) => {
   const { id } = req.params;
+
+  if (!id) return res.status(405).send("Method Not Allowed");
+  if (isNaN(id)) return res.status(400).send("SongId is not a number");
   const foundSong = songs.find((song) => song.id == id);
-  if (!foundSong)
-    return res.status(403).send(`Song with id of ${id} was not found`);
+  if (!foundSong) return res.status(404).send("Not Found");
 
   songs = songs.filter((song) => song.id != id);
   fixSongIdInPlaylists(id);
@@ -193,10 +205,10 @@ apiRouter.post("/playlists", (req, res) => {
   const newPlaylists = { id: nextPlaylistId, name: name, songIds: [] };
   playlists.push(newPlaylists);
 
-  res.status(200).json(newPlaylists);
+  res.status(201).json(newPlaylists);
 });
 
-apiRouter.patch("/playlists/:playlistId/:songId", (req, res) => {
+apiRouter.patch("/playlists/:playlistId/songs/:songId", (req, res) => {
   const { playlistId, songId } = req.params;
   const { songIds } = req.body;
   // Error if req.body is a bad request
