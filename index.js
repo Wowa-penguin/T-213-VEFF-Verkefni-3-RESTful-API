@@ -85,19 +85,18 @@ app.use(apiPath + version, apiRouter);
 
 // SONGS ENDPOINTS
 apiRouter.get("/songs", (req, res) => {
-  // http://localhost:3000/api/v1/songs?filter=Abracadabra,Róa
-  // Error if incorrect filter parameter (/songs/) t.d
   const requestedUrl = req.url;
-  if (requestedUrl === "/songs/") return res.status(400).send("Bad Request");
-
   const { filter } = req.query;
-  // Return all songs if no filter is provided and no filter error
-  if (!filter) {
-    return res.json(songs);
+  // Return all songs if the url is /songs
+  if (requestedUrl === "/songs") return res.status(200).json(songs);
+
+  // Error if url is /songs/ or no filter or id
+  if (!filter || requestedUrl === "/songs/") {
+    return res.status(400).send("Bad Request");
   }
 
   // Convert filter to an array to handle multiple filters if so
-  const arrayfilters = Array.isArray(filter) ? filter : filter.split(","); // if filter is a string then split it to make it array
+  let arrayfilters = Array.isArray(filter) ? filter : filter.split(","); // if filter is a string then split it to make it array
   arrayfilters = arrayfilters.map((f) => f.toLowerCase().trim()); //  Convert strings in arrayfilters array to lower case
 
   // Filter songs based on arrayfilters array
@@ -108,11 +107,9 @@ apiRouter.get("/songs", (req, res) => {
         song.artist.toLowerCase().includes(filterValue)
     )
   );
-  // filteredSongs.length;
-  // if (filteredSongs.length == 0) return res.status(400).send("Bad Request");
   return res.json(filteredSongs);
 });
-
+// SONGS POST
 apiRouter.post("/songs", (req, res) => {
   if (typeof req.body.title !== "string" || typeof req.body.artist !== "string")
     return res.status(400).send("Title or aetist is not a string");
@@ -137,7 +134,7 @@ apiRouter.post("/songs", (req, res) => {
 
   return res.status(201).json(newSong);
 });
-
+// SONGS GET :ID
 apiRouter.get("/songs/:id", (req, res) => {
   const { id } = req.params;
 
@@ -146,7 +143,7 @@ apiRouter.get("/songs/:id", (req, res) => {
   if (foundSong) return res.status(200).json(foundSong);
   else return res.status(400).send(`No song has the id of ${id}`);
 });
-
+// SONGS PATCH
 apiRouter.patch("/songs/:songId", (req, res) => {
   const { songId } = req.params;
   const { title, artist } = req.body;
@@ -161,7 +158,7 @@ apiRouter.patch("/songs/:songId", (req, res) => {
 
   res.status(200).json(foundSong);
 });
-
+// SONGS DELETE
 apiRouter.delete("/songs/:id", (req, res) => {
   const { id } = req.params;
 
@@ -177,26 +174,46 @@ apiRouter.delete("/songs/:id", (req, res) => {
 
 // PLAYLISTS ENDPOINTS
 apiRouter.get("/playlists", (req, res) => {
+  const requestedUrl = req.url;
+  let newSongArray = [];
+  if (requestedUrl === "/playlists/")
+    return res.status(400).send("Bad Request");
+
+  if (!isNaN(playlists[0].songIds[0])) {
+    playlists.forEach((songObj) => {
+      songObj.songIds.forEach((id) => {
+        foundSong = songs.find((song) => song.id == id);
+        newSongArray.push(foundSong);
+      });
+      songObj.songIds = newSongArray;
+      newSongArray = [];
+    });
+  }
   res.status(200).json(playlists);
 });
+// PLAYLISTS GET :ID
+apiRouter.get("/playlists/:playlistId", (req, res) => {
+  const { playlistId } = req.params;
+  if (!playlistId) return res.status(400).send("No id sendt");
 
-apiRouter.get("/playlists/:id", (req, res) => {
-  const { id } = req.params;
   let arraySongObj = [];
 
-  const foundPlayList = playlists.find((playlist) => playlist.id == id);
+  const foundPlayList = playlists.find((playlist) => playlist.id == playlistId);
+  // Error if no playlist found
+  if (!foundPlayList) return res.status(404).send("No playlist found");
 
-  foundPlayList.songIds.forEach((id) => {
-    foundSong = songs.find((song) => song.id == id);
-    arraySongObj.push(foundSong);
-  });
+  if (!isNaN(foundPlayList.songIds[0])) {
+    foundPlayList.songIds.forEach((playlistId) => {
+      console.log(typeof playlistId);
+      foundSong = songs.find((song) => song.id == playlistId);
+      arraySongObj.push(foundSong);
+    });
+    foundPlayList.songIds = arraySongObj;
+  }
 
-  foundPlayList.songIds = arraySongObj;
-
-  if (foundPlayList) return res.status(200).json(foundPlayList);
-  else return res.status(400).send(`No playlist has the id of ${id}`);
+  return res.status(200).json(foundPlayList);
 });
-
+// PLAYLISTS POST
 apiRouter.post("/playlists", (req, res) => {
   const { name } = req.body;
   // Error if there is no name
@@ -207,7 +224,7 @@ apiRouter.post("/playlists", (req, res) => {
 
   res.status(201).json(newPlaylists);
 });
-
+// PLAYLISTS PATCH
 apiRouter.patch("/playlists/:playlistId/songs/:songId", (req, res) => {
   const { playlistId, songId } = req.params;
   const { songIds } = req.body;
