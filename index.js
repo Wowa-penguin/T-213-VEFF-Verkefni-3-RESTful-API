@@ -175,43 +175,34 @@ apiRouter.delete("/songs/:id", (req, res) => {
 // PLAYLISTS ENDPOINTS
 apiRouter.get("/playlists", (req, res) => {
   const requestedUrl = req.url;
-  let newSongArray = [];
+  // let newSongArray = [];
   if (requestedUrl === "/playlists/")
     return res.status(400).send("Bad Request");
-
-  if (!isNaN(playlists[0].songIds[0])) {
-    playlists.forEach((songObj) => {
-      songObj.songIds.forEach((id) => {
-        foundSong = songs.find((song) => song.id == id);
-        newSongArray.push(foundSong);
-      });
-      songObj.songIds = newSongArray;
-      newSongArray = [];
-    });
-  }
   res.status(200).json(playlists);
 });
-// PLAYLISTS GET :ID
+// PLAYLISTS GET :ID / specific playlist
 apiRouter.get("/playlists/:playlistId", (req, res) => {
   const { playlistId } = req.params;
-  if (!playlistId) return res.status(400).send("No id sendt");
-
   let arraySongObj = [];
 
   const foundPlayList = playlists.find((playlist) => playlist.id == playlistId);
+
   // Error if no playlist found
+  if (!playlistId) return res.status(400).send("No id sendt");
   if (!foundPlayList) return res.status(404).send("No playlist found");
 
-  if (!isNaN(foundPlayList.songIds[0])) {
-    foundPlayList.songIds.forEach((playlistId) => {
-      console.log(typeof playlistId);
-      foundSong = songs.find((song) => song.id == playlistId);
-      arraySongObj.push(foundSong);
-    });
-    foundPlayList.songIds = arraySongObj;
-  }
+  foundPlayList.songIds.forEach((playlistId) => {
+    foundSong = songs.find((song) => song.id == playlistId);
+    arraySongObj.push(foundSong);
+  });
 
-  return res.status(200).json(foundPlayList);
+  //! The object to return to not fock upp the ids
+  const resObs = {
+    id: foundPlayList.id,
+    name: foundPlayList.name,
+    songIds: arraySongObj,
+  };
+  return res.status(200).json(resObs);
 });
 // PLAYLISTS POST
 apiRouter.post("/playlists", (req, res) => {
@@ -227,35 +218,29 @@ apiRouter.post("/playlists", (req, res) => {
 // PLAYLISTS PATCH
 apiRouter.patch("/playlists/:playlistId/songs/:songId", (req, res) => {
   const { playlistId, songId } = req.params;
-  const { songIds } = req.body;
-  // Error if req.body is a bad request
-  if (
-    !req.body ||
-    !Array.isArray(req.body.songIds) ||
-    req.body.songIds.length <= 0
-  ) {
-    return res.status(400).json({
-      error: `Song ids has to be an array form and not of length 0`,
-      data: req.body,
-    });
-  }
+  let arraySongObj = [];
 
-  const foundPlayList = playlists.find((playlist) => playlist.id == playlistId);
+  let foundPlayList = playlists.find((playlist) => playlist.id == playlistId);
   const foundSong = songs.find((song) => song.id == songId);
+  const exists = foundPlayList.songIds.find((song) => song == foundSong.id);
 
-  // Erorr 400
-  if (!foundPlayList || !foundSong)
-    return res
-      .status(400)
-      .send(`No playlist has the id of ${playlistId} or song ${songId}`);
-  // add the song ids to the found playlist
-  if (songId) {
-    songIds.forEach((id) => {
-      foundPlayList.songIds.push(id);
-    });
-  }
+  // Erorr 400 if playlist or song is not found or it exists
+  if (!foundPlayList || !foundSong || exists)
+    return res.status(400).send("Bad Request");
 
-  return res.status(200).json(foundPlayList);
+  foundPlayList.songIds.push(foundSong.id);
+  foundPlayList.songIds.forEach((id) => {
+    arrayOfSongs = songs.find((song) => song.id == id);
+    arraySongObj.push(arrayOfSongs);
+  });
+  //! The object to return to not fock upp the ids
+  const resObs = {
+    id: foundPlayList.id,
+    name: foundPlayList.name,
+    songIds: arraySongObj,
+  };
+
+  return res.status(200).json(resObs);
 });
 
 /* --------------------------
