@@ -102,17 +102,17 @@ apiRouter.post("/songs", (req, res) => {
 
   const newSong = {
     id: nextSongId,
-    title: req.body.title,
-    artist: req.body.artist,
+    title: req.body.title.trim(),
+    artist: req.body.artist.trim(),
   };
 
   // Error if no title or aetist in req.body
   if (!newSong.title || !newSong.artist)
-    return res.status(400).send("Missing title or artist");
+    return res.status(400).json({ message: "Missing title or artist" });
   // Error if the song exists in the db
   const exists = checkIfExists(newSong);
   if (exists === true) {
-    return res.status(403).send("The song exists");
+    return res.status(400).json({ message: "Bad Request" });
   }
 
   songs.push(newSong);
@@ -127,7 +127,7 @@ apiRouter.get("/songs/:songId", (req, res) => {
   const foundSong = songs.find((song) => song.id == songId);
   // Error if ther is no song found
   if (foundSong) return res.status(200).json(foundSong);
-  else return res.status(400).send("Bad Request");
+  else return res.status(400).json({ message: "Bad Request" });
 });
 // SONGS PATCH
 apiRouter.patch("/songs/:songId", (req, res) => {
@@ -173,14 +173,14 @@ apiRouter.delete("/songs/:songId", (req, res) => {
 
 // Error for requests to "/songs" without an ID (return 405)
 apiRouter.all("/songs", (req, res) => {
-  res.status(405).send("Method Not Allowed");
+  res.status(405).json({ message: "Method Not Allowed" });
 });
 
 // PLAYLISTS ENDPOINTS
 apiRouter.get("/playlists", (req, res) => {
   const requestedUrl = req.url;
   if (requestedUrl === "/playlists/")
-    return res.status(400).send("Bad Request");
+    return res.status(400).json({ message: "Bad Request" });
   res.status(200).json(playlists);
 });
 // PLAYLISTS GET :ID / specific playlist
@@ -188,12 +188,14 @@ apiRouter.get("/playlists/:playlistId", (req, res) => {
   const { playlistId } = req.params;
   let arraySongObj = [];
   // Error if palylistId is not a number
-  if (isNaN(playlistId)) return res.status(400).send("Bad Request");
+  if (isNaN(playlistId))
+    return res.status(400).json({ message: "Bad Request" });
 
   const foundPlayList = playlists.find((playlist) => playlist.id == playlistId);
 
   // Error if no playlist found
-  if (!foundPlayList) return res.status(404).send("No playlist found");
+  if (!foundPlayList)
+    return res.status(404).json({ message: "No playlist found" });
   // Find the songs in the songIds array and add the song objects to arraySongObj
   foundPlayList.songIds.forEach((playlistId) => {
     foundSong = songs.find((song) => song.id == playlistId);
@@ -214,7 +216,9 @@ apiRouter.post("/playlists", (req, res) => {
   if (!name || typeof name !== "string" || name.match(/^ *$/) !== null)
     return res.status(400).json({ message: "Bad Request" });
   // Error if playlist exist
-  const exists = playlists.find((playlist) => playlist.name == name);
+  const exists = playlists.find(
+    (playlist) => playlist.name.toLowerCase() == name.toLowerCase().trim()
+  );
   if (exists) return res.status(400).json({ message: "Bad Request" });
 
   const newPlaylists = { id: nextPlaylistId, name: name, songIds: [] };
@@ -256,7 +260,7 @@ apiRouter.patch("/playlists/:playlistId/songs/:songId", (req, res) => {
 
 // Error for requests to "/playlists" without an ID (return 405)
 apiRouter.all("/playlists", (req, res) => {
-  res.status(405).send("Method Not Allowed");
+  res.status(405).json({ message: "Method Not Allowed" });
 });
 
 /* --------------------------
